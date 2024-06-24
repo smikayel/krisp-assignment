@@ -1,108 +1,88 @@
-
-
-export class AudioRecorder extends Recorder {
-  constructor(audioWorkerPath) {
-    super(audioWorkerPath);
-  }
-
-  onWorkerMessage(event) {
-    if (event.data.type === 'processedData') {
-      console.log("Processed audio data received:", event.data.data);
-      this.processedData = event.data.data;
-      if (this.onProcessedData) this.onProcessedData(this.processedData);
-    }
-  }
-}
-
-export class VideoRecorder extends Recorder {
-  constructor(videoWorkerPath) {
-    super(videoWorkerPath);
-  }
-
-  onWorkerMessage(event) {
-    if (event.data.type === 'processedData') {
-      console.log("Processed video data received:", event.data.data);
-      this.processedData = event.data.data;
-      if (this.onProcessedData) this.onProcessedData(this.processedData);
-    }
-  }
-}
-
+import { AudioRecorder } from "./AudioRecorder.js";
+import { VideoRecorder } from "./VideoRecorder.js";
 
 export class MediaRecorderManager {
+  /**
+   * MediaRecorderManager to control audio and video recording
+   */
   constructor() {
     this.audioRecorder = new AudioRecorder('audioWorker.js');
     this.videoRecorder = new VideoRecorder('videoWorker.js');
 
-    this.audioRecorder.worker.onmessage = this.onAudioMessage.bind(this);
-    this.videoRecorder.worker.onmessage = this.onVideoMessage.bind(this);
+    this.audioRecorder.worker.onmessage = this.onAudioWorkerMessage.bind(this);
+    this.videoRecorder.worker.onmessage = this.onVideoWorkerMessage.bind(this);
 
     this.isRecording = false;
-    this.audioData = null;
-    this.videoData = null;
-
-    this.initPromises();
   }
 
-  initPromises() {
-    this.audioPromise = new Promise((resolve) => {
-      this.audioPromiseResolve = resolve;
-    });
-    this.videoPromise = new Promise((resolve) => {
-      this.videoPromiseResolve = resolve;
-    });
-  }
-
-  async startRecording() {
+  /**
+   * start method which will enable the recording process
+   */
+  startRecording() {
     if (!this.isRecording) {
-      await this.audioRecorder.start({ audio: true });
-      await this.videoRecorder.start({ video: true });
+      // Start audio and video recording
+      this.audioRecorder.start({ audio: true });
+      this.videoRecorder.start({ video: true });
+
       this.isRecording = true;
       console.log("Media recording started");
-      this.enableStopButton();
     }
   }
 
+  /**
+   * stop function to be able to stop the media recorder
+   * here should be called the methods for the stopping
+   * the audio and video recorders 
+   */
   stopRecording() {
     if (this.isRecording) {
       this.audioRecorder.stop();
       this.videoRecorder.stop();
+
       this.isRecording = false;
       console.log("Media recording stopped");
 
-      Promise.all([this.audioPromise, this.videoPromise])
-        .then(([audioData, videoData]) => {
-          this.combineMedia(audioData, videoData);
-        })
-        .catch(err => console.error("Error combining media:", err));
+      Promise.all([
+        this.audioRecorder.audioPromise,
+        this.videoRecorder.videoPromise
+      ]).then(([audioData, videoData]) => {
+        this.createPlayback(audioData, videoData);
+      }).catch(err => {
+        console.error("Error combining media:", err);
+      });
     }
   }
 
-  enableStopButton() {
-    const stopButton = document.getElementById('recorderStop');
-    stopButton.disabled = false;
-  }
+  /**
+   * the function which bounded to worker onMessage,
+   * we can get here the events from audioWorker
+   * @param {*} event 
+   */
+  onAudioWorkerMessage(event) { }
 
-  onAudioMessage(event) {
-    console.log("Audio data received:", event.data.data);
-    this.audioData = event.data.data;
-    this.audioPromiseResolve(this.audioData);
-  }
+  /**
+   * the function which bounded to worker onMessage,
+   * we can get here the events from videoWorker
+   * @param {*} event 
+   */
+  onVideoWorkerMessage(event) { }
 
-  onVideoMessage(event) {
-    console.log("Video data received:", event.data.data);
-    this.videoData = event.data.data;
-    this.videoPromiseResolve(this.videoData);
-  }
-
-  async combineMedia(audioBlob, videoBlob) {
+  /**
+   * method will create the full playback in canvas
+   * @param {Blob} audioBlob full recorded audio
+   * @param {Blob} videoBlob full recorded video
+   */
+  async createPlayback(audioBlob, videoBlob) {
     const audioUrl = URL.createObjectURL(audioBlob);
     const videoUrl = URL.createObjectURL(videoBlob);
 
     const videoElement = document.createElement('video');
     videoElement.src = videoUrl;
-    videoElement.muted = true;
     videoElement.play();
+
+    const audioElement = document.createElement('audio');
+    audioElement.src = audioUrl;
+    audioElement.play();
 
     const canvas = document.getElementById('videoCanvas');
     const ctx = canvas.getContext('2d');
@@ -112,13 +92,27 @@ export class MediaRecorderManager {
       canvas.height = videoElement.videoHeight;
       this.drawVideoFrame(videoElement, ctx, canvas);
     };
+
+    audioElement.onloadedmetadata = () => {
+      audioElement.play();
+    };
+
+    videoElement.onended = () => {
+      URL.revokeObjectURL(videoUrl);
+      URL.revokeObjectURL(audioUrl);
+    };
   }
 
+  /**
+   * 
+   * @param {Element} videoElement video element for the canvas video
+   * @param {*} ctx the 2d context from the canvas
+   * @param {*} canvas the main canvas where should be shown the video
+   */
   drawVideoFrame(videoElement, ctx, canvas) {
     ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
     if (!videoElement.paused && !videoElement.ended) {
       requestAnimationFrame(() => this.drawVideoFrame(videoElement, ctx, canvas));
     }
   }
-
 }
