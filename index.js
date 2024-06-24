@@ -29,18 +29,14 @@ export class Recorder {
   }
 
   stop() {
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+    if (this.mediaRecorder) {
       this.mediaRecorder.stop();
     }
   }
 
-  onWorkerMessage(event) {
-    // To be overridden by subclasses if needed
-  }
+  onWorkerMessage(event) { }
 
-  ondataavailable(data) {
-    // To be overridden by subclasses to handle chunk collection
-  }
+  ondataavailable(data) { }
 }
 
 export class AudioRecorder extends Recorder {
@@ -61,11 +57,20 @@ export class AudioRecorder extends Recorder {
   async ondataavailable(data) {
     this.audioChunks.push(data);
     this.worker.postMessage({ type: 'data', data: data });
-    if (this.audioPromiseResolve && this.audioChunks.length === 1) {
-      this.audioPromiseResolve(new Blob(this.audioChunks, { type: 'audio/webm' }));
+
+  }
+
+  stop() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      this.stream.getTracks().forEach(track => track.stop());
+      if (this.audioPromiseResolve) {
+        this.audioPromiseResolve(new Blob(this.audioChunks, { type: 'audio/webm' }));
+      }
     }
   }
 }
+
 
 export class VideoRecorder extends Recorder {
   constructor(videoWorkerPath) {
@@ -85,17 +90,27 @@ export class VideoRecorder extends Recorder {
   async ondataavailable(data) {
     this.videoChunks.push(data);
     this.worker.postMessage({ type: 'data', data: data });
-    if (this.videoPromiseResolve && this.videoChunks.length === 1) {
-      this.videoPromiseResolve(new Blob(this.videoChunks, { type: 'video/webm' }));
+
+  }
+
+  stop() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      this.stream.getTracks().forEach(track => track.stop());
+      if (this.videoPromiseResolve) {
+        this.videoPromiseResolve(new Blob(this.videoChunks, { type: 'video/webm' }));
+      }
     }
   }
 }
 
 export class MediaRecorderManager {
   constructor() {
+    // Initialize audio and video recorders
     this.audioRecorder = new AudioRecorder('audioWorker.js');
     this.videoRecorder = new VideoRecorder('videoWorker.js');
 
+    // Set up event listeners if needed for worker messages
     this.audioRecorder.worker.onmessage = this.onAudioWorkerMessage.bind(this);
     this.videoRecorder.worker.onmessage = this.onVideoWorkerMessage.bind(this);
 
@@ -104,11 +119,12 @@ export class MediaRecorderManager {
 
   async startRecording() {
     if (!this.isRecording) {
+      // Start audio and video recording
       await this.audioRecorder.start({ audio: true });
       await this.videoRecorder.start({ video: true });
+
       this.isRecording = true;
       console.log("Media recording started");
-      this.enableStopButton();
     }
   }
 
@@ -116,35 +132,33 @@ export class MediaRecorderManager {
     if (this.isRecording) {
       this.audioRecorder.stop();
       this.videoRecorder.stop();
+
       this.isRecording = false;
       console.log("Media recording stopped");
 
-      Promise.all([this.audioRecorder.audioPromise, this.videoRecorder.videoPromise])
-        .then(([audioData, videoData]) => {
-          console.log(audioData, videoData);
-          this.createPlayback(audioData, videoData);
-        })
-        .catch(err => console.error("Error combining media:", err));
+      Promise.all([
+        this.audioRecorder.audioPromise,
+        this.videoRecorder.videoPromise
+      ]).then(([audioData, videoData]) => {
+        this.createPlayback(audioData, videoData);
+      }).catch(err => {
+        console.error("Error combining media:", err);
+      });
     }
   }
 
-  enableStopButton() {
-    const stopButton = document.getElementById('recorderStop');
-    stopButton.disabled = false;
-  }
+  // Handle audio worker message if needed
+  onAudioWorkerMessage(event) { }
 
-  onAudioWorkerMessage(event) {
-    // Handle worker messages for audio if needed
-  }
+  // Handle video worker message if needed
+  onVideoWorkerMessage(event) { }
 
-  onVideoWorkerMessage(event) {
-    // Handle worker messages for video if needed
-  }
-
+  // Create playback elements for audio and video blobs
   async createPlayback(audioBlob, videoBlob) {
     const audioUrl = URL.createObjectURL(audioBlob);
     const videoUrl = URL.createObjectURL(videoBlob);
 
+    // Example: Create video and audio elements for playback
     const videoElement = document.createElement('video');
     videoElement.src = videoUrl;
     videoElement.play();
