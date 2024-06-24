@@ -1,4 +1,8 @@
 export class Recorder {
+  /**
+   * main worker class from which we should extend for each type of recorders
+   * @param {string} workerScript path to script for the worker
+   */
   constructor(workerScript) {
     this.worker = new Worker(workerScript);
     this.worker.onmessage = this.onWorkerMessage.bind(this);
@@ -6,6 +10,10 @@ export class Recorder {
     this.stream = null;
   }
 
+  /**
+   * start recorder
+   * @param {object} constraints the configs or actions to configure the worker
+   */
   async start(constraints) {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -13,7 +21,7 @@ export class Recorder {
 
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          this.ondataavailable(event.data); // Handle data collection in subclasses
+          this.ondataavailable(event.data);
         }
       };
 
@@ -21,25 +29,40 @@ export class Recorder {
         this.stream.getTracks().forEach(track => track.stop());
       };
 
-      this.mediaRecorder.start(10); // Capture chunks every 10 milliseconds
+      // we should capture each chunk with 10 milliseconds
+      this.mediaRecorder.start(10);
 
     } catch (error) {
       console.error('Error starting recorder:', error);
     }
   }
 
+  /**
+   * stop recorder
+   */
   stop() {
     if (this.mediaRecorder) {
       this.mediaRecorder.stop();
     }
   }
 
+  /**
+   * we will get the worker emitted message here,
+   * basically this method should be overridden in the sub class
+   */
   onWorkerMessage(event) { }
 
   ondataavailable(data) { }
 }
 
 export class AudioRecorder extends Recorder {
+
+  /**
+   * in this class we will start the recording of the audio, 
+   * we will send each 10 milliseconds to the worker, where we should able
+   * to edit the chunk and get back the processed chunk
+   * @param {string} audioWorkerPath the worker script path
+   */
   constructor(audioWorkerPath) {
     super(audioWorkerPath);
     this.audioChunks = [];
@@ -47,6 +70,10 @@ export class AudioRecorder extends Recorder {
     this.audioPromiseResolve = null;
   }
 
+  /**
+   * the start function for the recorder
+   * @param {*} constraints the action/config which should be sent to worker
+   */
   start(constraints) {
     super.start(constraints);
     this.audioPromise = new Promise((resolve) => {
@@ -54,12 +81,19 @@ export class AudioRecorder extends Recorder {
     });
   }
 
+  /**
+   * in this method we can get the chunk data of the audio 
+   * which we want to record
+   * @param {*} data the chunk data of the audio
+   */
   async ondataavailable(data) {
     this.audioChunks.push(data);
     this.worker.postMessage({ type: 'data', data: data });
-
   }
 
+  /**
+   * stop method for audio worker 
+   */
   stop() {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
@@ -73,6 +107,12 @@ export class AudioRecorder extends Recorder {
 
 
 export class VideoRecorder extends Recorder {
+  /**
+   * in this class we will start the recording of the video, 
+   * we will send each 10 milliseconds to the worker, where we should able
+   * to edit the chunk and get back the processed chunk
+   * @param {string} videoWorkerPath the worker script path
+   */
   constructor(videoWorkerPath) {
     super(videoWorkerPath);
     this.videoChunks = [];
@@ -80,6 +120,10 @@ export class VideoRecorder extends Recorder {
     this.videoPromiseResolve = null;
   }
 
+  /**
+   * the start function for the recorder
+   * @param {*} constraints the action/config which should be sent to worker
+   */
   start(constraints) {
     super.start(constraints);
     this.videoPromise = new Promise((resolve) => {
@@ -87,12 +131,20 @@ export class VideoRecorder extends Recorder {
     });
   }
 
+  /**
+   * in this method we can get the chunk data of the video 
+   * which we want to record
+   * @param {*} data the chunk data of the video
+   */
   async ondataavailable(data) {
     this.videoChunks.push(data);
     this.worker.postMessage({ type: 'data', data: data });
 
   }
 
+  /**
+   * this method will resolve the promise of the video Recording
+   */
   stop() {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
@@ -105,29 +157,38 @@ export class VideoRecorder extends Recorder {
 }
 
 export class MediaRecorderManager {
+  /**
+   * MediaRecorderManager to control audio and video recording
+   */
   constructor() {
-    // Initialize audio and video recorders
     this.audioRecorder = new AudioRecorder('audioWorker.js');
     this.videoRecorder = new VideoRecorder('videoWorker.js');
 
-    // Set up event listeners if needed for worker messages
     this.audioRecorder.worker.onmessage = this.onAudioWorkerMessage.bind(this);
     this.videoRecorder.worker.onmessage = this.onVideoWorkerMessage.bind(this);
 
     this.isRecording = false;
   }
 
-  async startRecording() {
+  /**
+   * start method which will enable the recording process
+   */
+  startRecording() {
     if (!this.isRecording) {
       // Start audio and video recording
-      await this.audioRecorder.start({ audio: true });
-      await this.videoRecorder.start({ video: true });
+      this.audioRecorder.start({ audio: true });
+      this.videoRecorder.start({ video: true });
 
       this.isRecording = true;
       console.log("Media recording started");
     }
   }
 
+  /**
+   * stop function to be able to stop the media recorder
+   * here should be called the methods for the stopping
+   * the audio and video recorders 
+   */
   stopRecording() {
     if (this.isRecording) {
       this.audioRecorder.stop();
@@ -147,18 +208,29 @@ export class MediaRecorderManager {
     }
   }
 
-  // Handle audio worker message if needed
+  /**
+   * the function which bounded to worker onMessage,
+   * we can get here the events from audioWorker
+   * @param {*} event 
+   */
   onAudioWorkerMessage(event) { }
 
-  // Handle video worker message if needed
+  /**
+   * the function which bounded to worker onMessage,
+   * we can get here the events from videoWorker
+   * @param {*} event 
+   */
   onVideoWorkerMessage(event) { }
 
-  // Create playback elements for audio and video blobs
+  /**
+   * method will create the full playback in canvas
+   * @param {Blob} audioBlob full recorded audio
+   * @param {Blob} videoBlob full recorded video
+   */
   async createPlayback(audioBlob, videoBlob) {
     const audioUrl = URL.createObjectURL(audioBlob);
     const videoUrl = URL.createObjectURL(videoBlob);
 
-    // Example: Create video and audio elements for playback
     const videoElement = document.createElement('video');
     videoElement.src = videoUrl;
     videoElement.play();
@@ -180,13 +252,18 @@ export class MediaRecorderManager {
       audioElement.play();
     };
 
-    // Reset video and audio URLs after playback ends to release resources
     videoElement.onended = () => {
       URL.revokeObjectURL(videoUrl);
       URL.revokeObjectURL(audioUrl);
     };
   }
 
+  /**
+   * 
+   * @param {Element} videoElement video element for the canvas video
+   * @param {*} ctx the 2d context from the canvas
+   * @param {*} canvas the main canvas where should be shown the video
+   */
   drawVideoFrame(videoElement, ctx, canvas) {
     ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
     if (!videoElement.paused && !videoElement.ended) {
