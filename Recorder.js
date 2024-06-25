@@ -1,11 +1,8 @@
 export class Recorder {
   /**
    * main worker class from which we should extend for each type of recorders
-   * @param {string} workerScript path to script for the worker
    */
-  constructor(workerScript) {
-    this.worker = new Worker(workerScript);
-    this.worker.onmessage = this.onWorkerMessage.bind(this);
+  constructor() {
     this.mediaRecorder = null;
     this.stream = null;
   }
@@ -45,12 +42,4 @@ export class Recorder {
       this.mediaRecorder.stop();
     }
   }
-
-  /**
-   * we will get the worker emitted message here,
-   * basically this method should be overridden in the sub class
-   */
-  onWorkerMessage(event) { }
-
-  ondataavailable(data) { }
 }

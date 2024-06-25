@@ -6,11 +6,8 @@ export class MediaRecorderManager {
    * MediaRecorderManager to control audio and video recording
    */
   constructor() {
-    this.audioRecorder = new AudioRecorder('audioWorker.js');
-    this.videoRecorder = new VideoRecorder('videoWorker.js');
-
-    this.audioRecorder.worker.onmessage = this.onAudioWorkerMessage.bind(this);
-    this.videoRecorder.worker.onmessage = this.onVideoWorkerMessage.bind(this);
+    this.audioRecorder = new AudioRecorder();
+    this.videoRecorder = new VideoRecorder();
 
     this.isRecording = false;
   }
@@ -52,20 +49,6 @@ export class MediaRecorderManager {
       });
     }
   }
-
-  /**
-   * the function which bounded to worker onMessage,
-   * we can get here the events from audioWorker
-   * @param {*} event 
-   */
-  onAudioWorkerMessage(event) { }
-
-  /**
-   * the function which bounded to worker onMessage,
-   * we can get here the events from videoWorker
-   * @param {*} event 
-   */
-  onVideoWorkerMessage(event) { }
 
   /**
    * method will create the full playback in canvas

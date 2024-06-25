@@ -7,10 +7,9 @@ export class AudioRecorder extends Recorder {
    * in this class we will start the recording of the audio, 
    * we will send each 10 milliseconds to the worker, where we should able
    * to edit the chunk and get back the processed chunk
-   * @param {string} audioWorkerPath the worker script path
    */
-  constructor(audioWorkerPath) {
-    super(audioWorkerPath);
+  constructor() {
+    super();
     this.audioChunks = [];
     this.audioPromise = null;
     this.audioPromiseResolve = null;
@@ -34,7 +33,7 @@ export class AudioRecorder extends Recorder {
    */
   async ondataavailable(data) {
     this.audioChunks.push(data);
-    this.worker.postMessage({ type: 'data', data: data });
+    console.log('data', data)
   }
 
   /**
