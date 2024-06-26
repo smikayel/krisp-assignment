@@ -5,6 +5,12 @@ import { MediaRecorderManager } from "./MediaRecorderManager.js";
 
   const startButton = document.querySelector('#recorderStart');
   const stopButton = document.querySelector('#recorderStop');
+
+  const volumeControl = document.getElementById('volume');
+  volumeControl.addEventListener('input', function(e) {
+    mediaRecorder.audioRecorder.setVolume(e.target.value)
+  });
+
   startButton.addEventListener('click', () => {
     mediaRecorder.startRecording();
     stopButton.disabled = false;

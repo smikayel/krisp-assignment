@@ -1,5 +1,4 @@
 import { AudioRecorder } from "./AudioRecorder.js";
-import { VideoRecorder } from "./VideoRecorder.js";
 
 export class MediaRecorderManager {
   /**
@@ -7,7 +6,7 @@ export class MediaRecorderManager {
    */
   constructor() {
     this.audioRecorder = new AudioRecorder();
-    this.videoRecorder = new VideoRecorder();
+    // this.videoRecorder = new VideoRecorder();
 
     this.isRecording = false;
   }
@@ -17,10 +16,7 @@ export class MediaRecorderManager {
    */
   startRecording() {
     if (!this.isRecording) {
-      // Start audio and video recording
-      this.audioRecorder.start({ audio: true });
-      this.videoRecorder.start({ video: true });
-
+      this.audioRecorder.start();
       this.isRecording = true;
       console.log("Media recording started");
     }
@@ -34,19 +30,10 @@ export class MediaRecorderManager {
   stopRecording() {
     if (this.isRecording) {
       this.audioRecorder.stop();
-      this.videoRecorder.stop();
+      // this.videoRecorder.stop();
 
       this.isRecording = false;
       console.log("Media recording stopped");
-
-      Promise.all([
-        this.audioRecorder.audioPromise,
-        this.videoRecorder.videoPromise
-      ]).then(([audioData, videoData]) => {
-        this.createPlayback(audioData, videoData);
-      }).catch(err => {
-        console.error("Error combining media:", err);
-      });
     }
   }
 
