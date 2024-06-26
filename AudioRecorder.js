@@ -1,68 +1,78 @@
 export class AudioRecorder {
-
   constructor() {
     this.mediaRecorder = null;
-    this.gainNode = null;
     this.recordedChunks = [];
-    this.volume = 1.0;
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
+    this.gainNode = null;
+    this.stream = null;
+    this.lastRecorded = null;
   }
 
-  async start() {
+  async startMicrophone() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.handleStream(stream);
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.handleStream(this.stream);
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
   }
 
-  stop () {
-    if (!this.mediaRecorder) return
-
-    console.log(this.mediaRecorder)
-    this.mediaRecorder.stop()
-  }
-
   handleStream(stream) {
-    const source = this.audioContext.createMediaStreamSource(stream);
-    this.gainNode = this.audioContext.createGain();
-    const destination = this.audioContext.createMediaStreamDestination();
-    
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioContext.createMediaStreamSource(stream);
+    this.gainNode = audioContext.createGain();
+    const destination = audioContext.createMediaStreamDestination();
+
     source.connect(this.gainNode);
     this.gainNode.connect(destination);
-    this.gainNode.connect(this.audioContext.destination);
+    this.gainNode.connect(audioContext.destination);
 
-    const mediaRecorder = new MediaRecorder(destination.stream);
-    
-    mediaRecorder.ondataavailable = (event) => {
+    this.mediaRecorder = new MediaRecorder(destination.stream);
+    this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         this.recordedChunks.push(event.data);
       }
     };
 
-    mediaRecorder.onstop = () => {
-      console.log('here')
-      const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      document.body.appendChild(a);
-      a.style = 'display: none';
-      a.href = url;
-      a.download = 'recording.webm';
-      a.click();
-      
-      window.URL.revokeObjectURL(url);
+    this.mediaRecorder.onstop = () => {
+      this.lastRecorded = new Blob(this.recordedChunks, { type: 'audio/webm' });
     };
-
-    this.mediaRecorder = mediaRecorder
   }
 
-  setVolume(volume) {
-    if (!this.gainNode) return
-    this.volume = parseFloat(volume)
-    this.gainNode.gain.value = this.volume;
+  downloadLastRecord () {
+    const url = URL.createObjectURL(this.lastRecorded);
+
+    const a = document.createElement('a');
+    document.body.appendChild(a);
+    a.style = 'display: none';
+    a.href = url;
+    a.download = 'recording.webm';
+    a.click();
+
+    window.URL.revokeObjectURL(url);
   }
 
+  setVolume(value) {
+    if (this.gainNode) {
+      this.gainNode.gain.value = value;
+    }
+  }
+
+  async start() {
+    await this.startMicrophone()
+    if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
+      this.recordedChunks = [];
+      this.mediaRecorder.start();
+      console.log('Recording started');
+    }
+  }
+
+  stop() {
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.stop();
+      this.stream.getTracks().forEach(function(track) {
+        track.stop();
+      });
+      console.log('Recording stopped');
+    }
+  }
 }
