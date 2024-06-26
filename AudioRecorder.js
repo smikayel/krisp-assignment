@@ -35,19 +35,20 @@ export class AudioRecorder {
 
     this.mediaRecorder.onstop = () => {
       this.lastRecorded = new Blob(this.recordedChunks, { type: 'audio/webm' });
+      if (this.resolveRecordedAudio) {
+        this.resolveRecordedAudio(this.lastRecorded);
+      }
     };
   }
 
-  downloadLastRecord () {
+  downloadLastRecord() {
     const url = URL.createObjectURL(this.lastRecorded);
-
     const a = document.createElement('a');
     document.body.appendChild(a);
     a.style = 'display: none';
     a.href = url;
     a.download = 'recording.webm';
     a.click();
-
     window.URL.revokeObjectURL(url);
   }
 
@@ -58,7 +59,7 @@ export class AudioRecorder {
   }
 
   async start() {
-    await this.startMicrophone()
+    await this.startMicrophone();
     if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
       this.recordedChunks = [];
       this.mediaRecorder.start();
@@ -69,10 +70,18 @@ export class AudioRecorder {
   stop() {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       this.mediaRecorder.stop();
-      this.stream.getTracks().forEach(function(track) {
-        track.stop();
-      });
+      this.stream.getTracks().forEach((track) => track.stop());
       console.log('Recording stopped');
     }
+  }
+
+  getRecordedAudio() {
+    return new Promise((resolve) => {
+      if (this.lastRecorded) {
+        resolve(this.lastRecorded);
+      } else {
+        this.resolveRecordedAudio = resolve;
+      }
+    });
   }
 }

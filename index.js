@@ -23,9 +23,6 @@ import { MediaRecorderManager } from "./MediaRecorderManager.js";
     stopButton.disabled = true;
     startButton.disabled = false;
 
-
-    console.log(mediaRecorder.audioRecorder.lastRecorded)
-    console.log(mediaRecorder.videoRecorder.recordedVideo)
-
+    mediaRecorder.createPlayback();
   });
 })();

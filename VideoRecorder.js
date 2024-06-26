@@ -60,6 +60,9 @@ export class VideoRecorder {
     this.mediaRecorder.onstop = () => {
       const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
       this.recordedVideo = blob;
+      if (this.resolveRecordedVideo) {
+        this.resolveRecordedVideo(blob);
+      }
     };
 
     this.mediaRecorder.start();
@@ -69,5 +72,15 @@ export class VideoRecorder {
     if (this.mediaRecorder) {
       this.mediaRecorder.stop();
     }
+  }
+
+  getRecordedVideo() {
+    return new Promise((resolve) => {
+      if (this.recordedVideo) {
+        resolve(this.recordedVideo);
+      } else {
+        this.resolveRecordedVideo = resolve;
+      }
+    });
   }
 }

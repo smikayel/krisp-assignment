@@ -29,11 +29,10 @@ export class MediaRecorderManager {
    * here should be called the methods for the stopping
    * the audio and video recorders 
    */
-  stopRecording() {
+  async stopRecording() {
     if (this.isRecording) {
       this.audioRecorder.stop();
       this.videoRecorder.stop();
-
       this.isRecording = false;
       console.log("Media recording stopped");
     }
@@ -41,10 +40,11 @@ export class MediaRecorderManager {
 
   /**
    * method will create the full playback in canvas
-   * @param {Blob} audioBlob full recorded audio
-   * @param {Blob} videoBlob full recorded video
    */
-  async createPlayback(audioBlob, videoBlob) {
+  async createPlayback() {
+    const videoBlob  = await this.videoRecorder.getRecordedVideo();
+    const audioBlob = await this.audioRecorder.getRecordedAudio();
+
     const audioUrl = URL.createObjectURL(audioBlob);
     const videoUrl = URL.createObjectURL(videoBlob);
 
