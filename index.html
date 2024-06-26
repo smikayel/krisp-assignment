@@ -9,82 +9,13 @@
   
   <button id="recorderStart">Start Recording</button>
   <button id="recorderStop">Stop Recording</button>
-<!-- 
-  <script>
-    let mediaRecorder;
-    let recordedChunks = [];
 
-    async function startMicrophone() {
-      try {
-        // Request microphone access
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        handleStream(stream);
-      } catch (error) {
-        console.error('Error accessing microphone:', error);
-      }
-    }
+  <img id="overlay" src="test.jpeg" style="display:none;">
 
-    function handleStream(stream) {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      
-      // Create a source node from the stream
-      const source = audioContext.createMediaStreamSource(stream);
-      
-      // Create a gain node
-      const gainNode = audioContext.createGain();
-      
-      // Create a destination node
-      const destination = audioContext.createMediaStreamDestination();
-      
-      // Connect the nodes
-      source.connect(gainNode);
-      gainNode.connect(destination);
-      gainNode.connect(audioContext.destination); // To hear the audio in real-time
+  <video id="video" autoplay></video>
+  <canvas id="canvas" style="display:none;"></canvas>
 
-      // Adjust the volume in real-time
-      const volumeControl = document.getElementById('volume');
-      volumeControl.addEventListener('input', function() {
-        gainNode.gain.value = this.value;
-      });
-
-      // Set up the MediaRecorder with the processed stream
-      mediaRecorder = new MediaRecorder(destination.stream);
-      
-      mediaRecorder.ondataavailable = function(event) {
-        if (event.data.size > 0) {
-          recordedChunks.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = function() {
-        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        document.body.appendChild(a);
-        a.style = 'display: none';
-        a.href = url;
-        a.download = 'recording.webm';
-        a.click();
-        
-        window.URL.revokeObjectURL(url);
-      };
-    }
-
-    document.getElementById('start').addEventListener('click', () => {
-      recordedChunks = [];
-      mediaRecorder.start();
-      console.log('Recording started');
-    });
-
-    document.getElementById('stop').addEventListener('click', () => {
-      mediaRecorder.stop();
-      console.log('Recording stopped');
-    });
-
-    // Start the microphone on page load
-    startMicrophone();
-  </script> -->
+  
   <script src="./index.js" type="module"> </script>
 </body>
 </html>

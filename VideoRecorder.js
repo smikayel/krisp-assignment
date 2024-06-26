@@ -1,77 +1,73 @@
-// import { Recorder } from "./Recorder.js";
+export class VideoRecorder {
+  constructor() {
+    const videoElement = document.getElementById('video');
+    const canvasElement = document.getElementById('canvas');
 
-// export class VideoRecorder extends Recorder {
-//   /**
-//    * in this class we will start the recording of the video, 
-//    * we will send each 10 milliseconds to the worker, where we should able
-//    * to edit the chunk and get back the processed chunk
-//    */
-//   constructor() {
-//     super();
-//     this.videoChunks = [];
-//     this.videoPromise = null;
-//     this.videoPromiseResolve = null;
-//     this.videoElement = document.createElement('video');
-//     this.canvasElement = document.createElement('canvas');
-//     this.canvasContext = this.canvasElement.getContext('2d');
-//     document.body.appendChild(this.canvasElement);
-//   }
+    this.video = videoElement;
+    this.canvas = canvasElement;
+    this.recordedVideo = null;
+    this.overlay = document.getElementById('overlay');
+    this.mediaRecorder = null;
+    this.recordedChunks = [];
+    this.overlayImage = new Image();
+    this.overlayImage.src = this.overlay.src;
+  }
 
-//   /**
-//    * the start function for the recorder
-//    * @param {*} constraints the action/config which should be sent to worker
-//    */
-//   async start(constraints) {
-//     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-//     this.stream = stream;
-//     this.videoElement.srcObject = stream;
-//     this.videoElement.play();
+  async start() {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    this.video.srcObject = stream;
 
-//     this.videoElement.onloadedmetadata = () => {
-//       this.canvasElement.width = this.videoElement.videoWidth;
-//       this.canvasElement.height = this.videoElement.videoHeight;
-//       this.drawVideoFrame();
-//     };
+    const videoTrack = stream.getVideoTracks()[0];
+    const processor = new MediaStreamTrackProcessor(videoTrack);
+    const generator = new MediaStreamTrackGenerator({ kind: 'video' });
+    const writer = generator.writable.getWriter();
+    const reader = processor.readable.getReader();
 
-//     super.start(constraints);
-//     this.videoChunks = []; // Clear previous video chunks
-//     this.videoPromise = new Promise((resolve) => {
-//       this.videoPromiseResolve = resolve;
-//     });
-//   }
+    const { width, height } = this.video.getBoundingClientRect();
+    this.canvas.width = width;
+    this.canvas.height = height;
+    const ctx = this.canvas.getContext('2d');
 
-//   /**
-//    * in this method we can get the chunk data of the video 
-//    * which we want to record
-//    * @param {*} data the chunk data of the video
-//    */
-//   async ondataavailable(data) {
-//     this.videoChunks.push(data);
-//     console.log('chunk here');
-//   }
+    const processFrame = async () => {
+      const result = await reader.read();
+      if (result.done) {
+        writer.close();
+        return;
+      }
 
-//   /**
-//    * this method will resolve the promise of the video Recording
-//    */
-//   stop() {
-//     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-//       this.mediaRecorder.stop();
-//       this.stream.getTracks().forEach(track => track.stop());
-//       if (this.videoPromiseResolve) {
-//         const videoBlob = new Blob(this.videoChunks, { type: 'video/webm' });
-//         this.videoPromiseResolve(videoBlob);
-//       }
-//     }
-//   }
+      const frame = result.value;
+      ctx.drawImage(frame, 0, 0, width, height);
+      ctx.drawImage(this.overlayImage, 0, 0, width / 2, height / 2);
+      const processedFrame = new VideoFrame(this.canvas, { timestamp: frame.timestamp });
+      writer.write(processedFrame);
+      frame.close();
+      processedFrame.close();
 
-//   /**
-//    * Draws the current video frame onto the canvas
-//    */
-//   drawVideoFrame() {
-//     if (this.videoElement.paused || this.videoElement.ended) {
-//       return;
-//     }
-//     this.canvasContext.drawImage(this.videoElement, 0, 0, this.canvasElement.width, this.canvasElement.height);
-//     requestAnimationFrame(() => this.drawVideoFrame());
-//   }
-// }
+      processFrame();
+    };
+
+    processFrame();
+
+    const processedStream = new MediaStream([generator]);
+    this.mediaRecorder = new MediaRecorder(processedStream);
+
+    this.mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        this.recordedChunks.push(event.data);
+      }
+    };
+
+    this.mediaRecorder.onstop = () => {
+      const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+      this.recordedVideo = blob;
+    };
+
+    this.mediaRecorder.start();
+  }
+
+  stop() {
+    if (this.mediaRecorder) {
+      this.mediaRecorder.stop();
+    }
+  }
+}
