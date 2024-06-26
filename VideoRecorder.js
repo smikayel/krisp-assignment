@@ -1,4 +1,9 @@
 export class VideoRecorder {
+
+  /**
+   * video recorder constructor, to setup all the required
+   * attributes for video manipulations
+   */
   constructor() {
     const videoElement = document.getElementById('video');
     const canvasElement = document.getElementById('canvas');
@@ -13,6 +18,9 @@ export class VideoRecorder {
     this.overlayImage.src = this.overlay.src;
   }
 
+  /**
+   * start the video stream to be able to show the streaming, and recording
+   */
   async start() {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     this.video.srcObject = stream;
@@ -68,12 +76,19 @@ export class VideoRecorder {
     this.mediaRecorder.start();
   }
 
+  /**
+   * stop the video recording stream
+   */
   stop() {
     if (this.mediaRecorder) {
       this.mediaRecorder.stop();
     }
   }
 
+  /**
+   * method will resolve the recorded video
+   * @returns the video stream as the blob data
+   */
   getRecordedVideo() {
     return new Promise((resolve) => {
       if (this.recordedVideo) {

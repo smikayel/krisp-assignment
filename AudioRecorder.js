@@ -15,7 +15,10 @@ export class AudioRecorder {
       console.error('Error accessing microphone:', error);
     }
   }
-
+  /**
+   * process the stream to change the volume with AudioContext API
+   * @param {MediaStream} stream 
+   */
   handleStream(stream) {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioContext.createMediaStreamSource(stream);
@@ -41,6 +44,10 @@ export class AudioRecorder {
     };
   }
 
+  /**
+   * basically the method used to test the recorded audio
+   * it's starting the download the audio, which was recorded
+   */
   downloadLastRecord() {
     const url = URL.createObjectURL(this.lastRecorded);
     const a = document.createElement('a');
@@ -52,12 +59,19 @@ export class AudioRecorder {
     window.URL.revokeObjectURL(url);
   }
 
+  /**
+   * change the audio volume
+   * @param {number} value 
+   */
   setVolume(value) {
     if (this.gainNode) {
       this.gainNode.gain.value = value;
     }
   }
 
+  /**
+   * start the stream of the audio
+   */
   async start() {
     await this.startMicrophone();
     if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
@@ -67,6 +81,9 @@ export class AudioRecorder {
     }
   }
 
+  /**
+   * stop the stream of the recorded audio
+   */
   stop() {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       this.mediaRecorder.stop();
@@ -75,6 +92,10 @@ export class AudioRecorder {
     }
   }
 
+  /**
+   * method for the handling the resolving the audioStream
+   * @returns the recorded blob audio
+   */
   getRecordedAudio() {
     return new Promise((resolve) => {
       if (this.lastRecorded) {

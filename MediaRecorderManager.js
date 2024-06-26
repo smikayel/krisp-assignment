@@ -27,7 +27,7 @@ export class MediaRecorderManager {
   /**
    * stop function to be able to stop the media recorder
    * here should be called the methods for the stopping
-   * the audio and video recorders 
+   * the audio and video recorders
    */
   async stopRecording() {
     if (this.isRecording) {
