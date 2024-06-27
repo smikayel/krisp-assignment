@@ -7,15 +7,25 @@ export class VideoRecorder {
   constructor() {
     const videoElement = document.getElementById('video');
     const canvasElement = document.getElementById('canvas');
+    const overlayUpload = document.getElementById('overlayUpload');
 
     this.video = videoElement;
     this.canvas = canvasElement;
     this.recordedVideo = null;
-    this.overlay = document.getElementById('overlay');
     this.mediaRecorder = null;
     this.recordedChunks = [];
     this.overlayImage = new Image();
-    this.overlayImage.src = this.overlay.src;
+
+    overlayUpload.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.overlayImage.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
   }
 
   /**
@@ -32,8 +42,8 @@ export class VideoRecorder {
     const reader = processor.readable.getReader();
 
     // give the dimensions for the video
-    const width = 600
-    const height = 480
+    const width = 600;
+    const height = 480;
     this.canvas.width = width;
     this.canvas.height = height;
     const ctx = this.canvas.getContext('2d');
@@ -47,7 +57,9 @@ export class VideoRecorder {
 
       const frame = result.value;
       ctx.drawImage(frame, 0, 0, width, height);
-      ctx.drawImage(this.overlayImage, 0, 0, width / 2, height / 2);
+      if (this.overlayImage.src) {
+        ctx.drawImage(this.overlayImage, 0, 0, width / 2, height / 2);
+      }
       const processedFrame = new VideoFrame(this.canvas, { timestamp: frame.timestamp });
       writer.write(processedFrame);
       frame.close();
