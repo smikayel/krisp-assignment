@@ -3,7 +3,6 @@ import { MediaRecorderManager } from "./MediaRecorderManager.js";
 (() => {
   const mediaRecorder = new MediaRecorderManager()
 
-
   const startButton = document.querySelector('#recorderStart');
   const stopButton = document.querySelector('#recorderStop');
 
@@ -16,13 +15,24 @@ import { MediaRecorderManager } from "./MediaRecorderManager.js";
     mediaRecorder.startRecording();
     stopButton.disabled = false;
     startButton.disabled = true;
+
+    const videoContainer = document.querySelector('.VideoContainer')
+    videoContainer.style.display = '';
+
+    const playback = document.getElementById('videoCanvas')
+    playback.style.display = 'none';
   });
 
   stopButton.addEventListener('click', () => {
     mediaRecorder.stopRecording();
     stopButton.disabled = true;
     startButton.disabled = false;
-
     mediaRecorder.createPlayback();
+
+    const videoContainer = document.querySelector('.VideoContainer')
+    videoContainer.style.display = 'none';
+
+    const playback = document.getElementById('videoCanvas')
+    playback.style.display = '';
   });
 })();

@@ -27,7 +27,6 @@ export class AudioRecorder {
 
     source.connect(this.gainNode);
     this.gainNode.connect(destination);
-    this.gainNode.connect(audioContext.destination);
 
     this.mediaRecorder = new MediaRecorder(destination.stream);
     this.mediaRecorder.ondataavailable = (event) => {

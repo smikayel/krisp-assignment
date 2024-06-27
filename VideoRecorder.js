@@ -31,7 +31,9 @@ export class VideoRecorder {
     const writer = generator.writable.getWriter();
     const reader = processor.readable.getReader();
 
-    const { width, height } = this.video.getBoundingClientRect();
+    // give the dimensions for the video
+    const width = 600
+    const height = 480
     this.canvas.width = width;
     this.canvas.height = height;
     const ctx = this.canvas.getContext('2d');
